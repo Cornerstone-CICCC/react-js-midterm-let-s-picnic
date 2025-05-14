@@ -4,6 +4,7 @@ import cookieSession from 'cookie-session'
 import cors from 'cors'
 dotenv.config()
 import { connectDb } from './database/dbClient'
+import userRouter from './routes/user.routes'
 import categoryRouter from './routes/category.routes'
 import productRouter from './routes/product.routes'
 
@@ -29,6 +30,7 @@ app.use(cookieSession({
 }))
 
 // Routes
+app.use('/user', userRouter);
 app.use('/category', categoryRouter);
 app.use('/product', productRouter)
 
