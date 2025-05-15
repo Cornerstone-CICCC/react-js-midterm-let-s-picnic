@@ -3,11 +3,12 @@ import productController from "../controllers/product.controller";
 
 const productRouter = Router()
 
-productRouter.get('/', productController.getAllProducts)
-productRouter.post('/', productController.addProduct)
-productRouter.get('/:productId', productController.getProductById)
-productRouter.post('/:productName', productController.getProductByName)
-productRouter.put('/:productId', productController.editProduct)
-productRouter.delete('/:productId', productController.deleteProduct)
+productRouter.get('/', productController.getAllProducts) // ok
+productRouter.post('/', productController.addProduct) // ok
+productRouter.put('/:productId', productController.editProduct) // ok
+productRouter.delete('/:productId', productController.deleteProduct) // ok
+productRouter.get('/category/:categoryId', productController.getProductsByCategoryId)
+productRouter.get('/search/:productName', productController.getProductByName)
+productRouter.get('/:productId', productController.getProductById) // ok http://localhost:3000/product/1
 
 export default productRouter

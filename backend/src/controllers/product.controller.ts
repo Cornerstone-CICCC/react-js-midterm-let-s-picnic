@@ -1,5 +1,7 @@
 import { Request, Response } from "express";
 import productModel from "../models/product.model";
+import { Product } from "../types/product";
+import { error } from "console";
 
 // get all products
 const getAllProducts = async (req: Request, res: Response) => {
@@ -45,7 +47,22 @@ const getProductByName = async (req: Request, res: Response) => {
   }
 }
 
-// add product 
+// get products by category id
+const getProductsByCategoryId = async (req: Request, res: Response) => {
+  const categoryId = parseInt(req.params.categoryId)
+  try {
+    const products = await productModel.getProductsByCategoryId(categoryId)
+    if(!products) {
+      res.status(404).json({ error: "Products not found" })
+      return
+    }
+    res.status(200).json(products)
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch products by category id" })
+  }
+}
+
+// add product
 const addProduct = async (req: Request, res: Response) => {
   const { productName, categoryId, price, image, description } = req.body
   if (!productName || !categoryId || !price || !image || !description) {
@@ -54,7 +71,7 @@ const addProduct = async (req: Request, res: Response) => {
   }
 
   try {
-    const newProduct = await productModel.creatProduct({
+    const newProduct = await productModel.createProduct({
       productName,
       categoryId,
       price,
@@ -68,11 +85,11 @@ const addProduct = async (req: Request, res: Response) => {
 }
 
 // edit product by id
-const editProduct = async (req: Request, res: Response) => {
+const editProduct = async (req: Request<{ productId: string }, {}, Partial<Product>>, res: Response) => {
   const id = parseInt(req.params.productId)
   try {
     const { productName, categoryId, price, image, description } = req.body
-    const product = await productModel.editProduct(id, productName, categoryId, price, image, description)
+    const product = await productModel.editProduct(id, {productName, categoryId, price, image, description})
 
     if (!product) {
       res.status(404).json({ message: "Product not found" })
@@ -100,6 +117,7 @@ export default {
   getAllProducts,
   getProductById,
   getProductByName,
+  getProductsByCategoryId,
   addProduct,
   editProduct,
   deleteProduct

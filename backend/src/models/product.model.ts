@@ -6,7 +6,13 @@ const getAllProducts = async () => {
   const client = createClient()
   try {
     await client.connect()
-    const result = await client.query(`SELECT * FROM "product" ORDER BY product_name ASC`)
+    const result = await client.query(
+      `SELECT product.*, category.category_name
+       FROM "product" AS product
+       LEFT JOIN "category" AS category
+       ON product.category_id = category.id
+       ORDER BY product_name ASC`
+    )
     return result.rows
   } catch (err) {
     console.error(err)
@@ -21,7 +27,12 @@ const getProductById = async (id: number) => {
   const client = createClient()
   try {
     await client.connect()
-    const result = await client.query(`SELECT * FROM "product" WHERE id = $1`, [id])
+    const result = await client.query(
+      `SELECT product.*, category.category_name
+       FROM "product" AS product
+       LEFT JOIN "category" AS category
+       ON product.category_id = category.id
+       WHERE product.id = $1`, [id])
     return result.rows[0]
   } catch (err) {
     console.error(err)
@@ -36,7 +47,12 @@ const getProductByName = async (productName: string) => {
   const client = createClient()
   try {
     await client.connect()
-    const result = await client.query(`SELECT * FROM "product" WHERE product_name = $1`, [productName])
+    const result = await client.query(
+      `SELECT product.*, category.category_name
+       FROM "product" AS product
+       LEFT JOIN "category" AS category
+       ON product.category_id = category.id
+       WHERE product.product_name = $1`, [productName])
     return result.rows[0]
   } catch (err) {
     console.error(err)
@@ -46,8 +62,28 @@ const getProductByName = async (productName: string) => {
   }
 }
 
-// creat product 
-const creatProduct = async (newProduct: Omit<Product, 'id'| 'createdAt' | 'updatedAt'>) => {
+// get products by group category
+const getProductsByCategoryId = async (categoryId: number) => {
+  const client = createClient()
+  try {
+    await client.connect()
+    const result = await client.query(
+      `SELECT product.*, category.category_name
+       FROM "product" AS product
+       LEFT JOIN "category" AS category
+       ON product.category_id = category.id
+       WHERE product.category_id = $1`,[categoryId])
+    return result.rows
+  } catch (err) {
+    console.error(err)
+    throw err
+  } finally {
+    await client.end()
+  }
+}
+
+// create product 
+const createProduct = async (newProduct: Omit<Product, 'id'| 'createdAt' | 'updatedAt'>) => {
   const { productName, categoryId, price, image, description } = newProduct
   const client = createClient()
   try {
@@ -63,20 +99,22 @@ const creatProduct = async (newProduct: Omit<Product, 'id'| 'createdAt' | 'updat
 }
 
 // edit product by id
-const editProduct = async (
-  id: number,
-  productName: string,
-  categoryId: number,
-  price: number,
-  image: string,
-  description: string
-) => {
+const editProduct = async (id: number, updatedProduct: Partial<Product>) => {
   const foundProduct = await getProductById(id)
   if (!foundProduct) return undefined
   const client = createClient()
   try {
     await client.connect()
-    const result = await client.query(`UPDATE "product" SET product_name = $1, category_id = $2, price = $3, image = $4, description = $5 WHERE id = $6 RETURNING *`, [productName, categoryId, price, image, description, id])
+    const updateData = {
+      productName: updatedProduct.productName ?? foundProduct.product_name,
+      categoryId: updatedProduct.categoryId ?? foundProduct.category_id,
+      price: updatedProduct.price ?? foundProduct.price,
+      image: updatedProduct.image ?? foundProduct.image,
+      description: updatedProduct.description ?? foundProduct.description
+    }
+    const result = await client.query(
+      `UPDATE "product" SET product_name = $1, category_id = $2, price = $3, image = $4, description = $5 WHERE id = $6 RETURNING *`,
+      [updateData.productName, updateData.categoryId, updateData.price, updateData.image, updateData.description, id])
     return result.rows[0]
   } catch (err) {
     console.error(err)
@@ -107,7 +145,8 @@ export default {
   getAllProducts,
   getProductById,
   getProductByName,
-  creatProduct,
+  getProductsByCategoryId,
+  createProduct,
   editProduct,
   deleteProduct
 }
