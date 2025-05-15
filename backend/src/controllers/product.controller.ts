@@ -1,7 +1,6 @@
 import { Request, Response } from "express";
 import productModel from "../models/product.model";
 import { Product } from "../types/product";
-import { error } from "console";
 
 // get all products
 const getAllProducts = async (req: Request, res: Response) => {
@@ -17,7 +16,7 @@ const getAllProducts = async (req: Request, res: Response) => {
 const getProductById = async (req: Request, res: Response) => {
   const id = parseInt(req.params.productId)
   if (isNaN(id)) {
-    res.status(400).json({ error: "Invalid user ID. Must be a number." })
+    res.status(400).json({ error: "Invalid product ID. Must be a number." })
     return
   }
   try {
