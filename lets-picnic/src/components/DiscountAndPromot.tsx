@@ -1,6 +1,15 @@
+import {motion} from 'framer-motion'
+import {useMediaQuery} from 'react-responsive'
+
 const DiscountAndPromot = () => {
+    const isDesktop = useMediaQuery({minWidth:640});
+
   return (
-    <div className="flex justify-between gap-5">
+    <motion.div className="flex flex-col items-center sm:flex-row sm:justify-between gap-5"
+        initial={isDesktop ? {opacity:0, scale:0, x:-500} : false}
+        whileInView={isDesktop ? {opacity:1, scale:1, x:0} : {}}
+        transition={isDesktop ? {duration:0.7} : {}}
+    >
         <section className="flex flex-col justify-center w-3xs h-100 bg-pink-200 rounded-2xl">
             <div className="h-1/2 flex flex-col gap-3 justify-center bg-pink-200 rounded-t-2xl px-7 pt-3">
                 <h2 className="text-rose-950 font-extrabold text-lg">Save</h2>
@@ -44,7 +53,7 @@ const DiscountAndPromot = () => {
                 <img className="z-10" src="https://placehold.jp/100x150.png" alt="" />
             </div>
         </section>
-    </div>
+    </motion.div>
   )
 }
 
