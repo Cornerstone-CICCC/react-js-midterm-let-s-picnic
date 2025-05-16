@@ -32,7 +32,8 @@ app.use(cookieSession({
 // Routes
 app.use('/user', userRouter);
 app.use('/category', categoryRouter);
-app.use('/product', productRouter)
+app.use('/product', productRouter);
+app.use('/purchase', productRouter);
 
 // Fallback
 app.use((req: Request, res: Response) => {
