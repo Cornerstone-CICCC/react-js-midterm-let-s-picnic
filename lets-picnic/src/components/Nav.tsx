@@ -17,7 +17,7 @@ const Nav = () => {
                 <TiFlash className="text-yellow-300 text-xl hidden md:block" />
                 <p className="text-white hidden md:block">Order now and get it!</p>
                 <div className="flex justify-center items-center rounded-full bg-white w-10 h-10">
-                    <FaShoppingCart className="w-fuㄋll text-teal-800" />
+                    <FaShoppingCart className="w-full text-teal-800" />
                 </div>
                 <img className="rounded-full w-10 h-10" src="https://placehold.jp/150x150.png" alt="" />
 
