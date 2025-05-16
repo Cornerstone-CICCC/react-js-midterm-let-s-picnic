@@ -1,5 +1,6 @@
 import { createClient } from "../database/dbClient";
 import { Cart } from "../types/cart";
+import { CartItem } from "../types/cartItem";
 
 // get all carts
 const getAllCarts = async () => {
@@ -7,6 +8,21 @@ const getAllCarts = async () => {
   try {
     await client.connect()
     const result = await client.query(`SELECT * FROM cart ORDER BY user_id ASC`)
+    return result.rows
+  } catch (err) {
+    console.error(err)
+    throw err
+  } finally {
+    await client.end()
+  }
+}
+
+// get all cart items
+const getAllCartItems = async () => {
+  const client = createClient()
+  try {
+    await client.connect()
+    const result = await client.query(`SELECT * FROM cart_item ORDER BY product_id ASC`)
     return result.rows
   } catch (err) {
     console.error(err)
@@ -46,6 +62,44 @@ const createCartByUserId = async (userId: number) => {
   }
 }
 
+// add cart item to cart by user id
+const addCartItemToCartByUserId = async (userId: number, productId: number, quantity: number) => {
+  const client = createClient()
+  try {
+    await client.connect()
+    const cart = await createCartByUserId(userId)
+
+    // check cart item is exist ?
+    const existingItem = await client.query(
+      `SELECT * FROM cart_item WHERE cart_id = $1 AND product_id = $2`,
+      [cart.id, productId]
+    )
+
+    if (existingItem.rows.length > 0) {
+      // if already has the item, the item + 1
+      const updatedItem = await client.query(
+        `UPDATE cart_item SET quantity = quantity + $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING *`,
+        [quantity, existingItem.rows[0].id]
+      )
+      return updatedItem.rows[0]
+    } else {
+      // if no, add new item
+      const newItem = await client.query(
+        `INSERT INTO cart_item (cart_id, product_id, quantity, created_at, updated_at)
+         VALUES ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+         RETURNING *`,
+        [cart.id, productId, quantity]
+      )
+      return newItem.rows[0]
+    }
+  } catch (err) {
+    console.error(err)
+    throw err
+  } finally {
+    await client.end()
+  }
+}
+
 // get cart by userId (just show status: "active")
 const getCartByUserId = async (userId: number) => {
   const client = createClient()
@@ -61,15 +115,21 @@ const getCartByUserId = async (userId: number) => {
   }
 }
 
-//  edit cart by userId (just edit status: "active")
-const editCartByUserId = async (userId: number, updateData: Partial<Cart>) => {
+//  edit cart by userId ( active cart can change cart item quantity)
+const updateCartItemQuantityByUserId = async (userId: number, quantity: number, cartItemId: number) => {
+      
+  // find active cart
   const foundCart = await getCartByUserId(userId)
   if (!foundCart) return undefined
   const client = createClient()
   try {
     await client.connect()
-    const result = await client.query(``)
-    return result.rows
+    // update cart item quantity
+    const result = await client.query(
+      `UPDATE cart_item SET quantity = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING *`,
+      [quantity, cartItemId]
+    )
+    return result.rows[0];
   } catch (err) {
     console.error(err)
     throw err
@@ -78,13 +138,36 @@ const editCartByUserId = async (userId: number, updateData: Partial<Cart>) => {
   }
 }
 
-// delete cart by userId (delete is change status to "delete")
-const deleteCartByUserId = async () => {
+// delete cart by userId (active cart can delete cart item)
+const deleteCartItemByUserId = async (userId: number, cartItemId: number) => {
+  // find active cart
+  const foundCart = await getCartByUserId(userId)
+  if (!foundCart) return undefined
   const client = createClient()
   try {
     await client.connect()
-    const result = await client.query(``)
-    return result.rows
+    // delete cart item by cart id
+    const result = await client.query(`DELETE FROM cart_item WHERE id = ${cartItemId}`)
+    return result.rows[0]
+  } catch (err) {
+    console.error(err)
+    throw err
+  } finally {
+    await client.end()
+  }
+}
+
+// update Cart Status By User Id
+const updateCartStatusByUserId = async (userId: number, newStatus: "active" | "purchased" | "delete") => {
+  const client =createClient()
+  try {
+    await client.connect()
+    const result = await client.query(`
+      UPDATE cart SET status = $1, updated_at = CURRENT_TIMESTAMP
+      WHERE user_id = $2 AND status = 'active'
+      RETURNING *
+      `, [newStatus, userId])
+      return result.rows[0]
   } catch (err) {
     console.error(err)
     throw err
@@ -96,8 +179,11 @@ const deleteCartByUserId = async () => {
 
 export default {
   getAllCarts,
+  getAllCartItems,
   createCartByUserId,
+  addCartItemToCartByUserId,
   getCartByUserId,
-  editCartByUserId,
-  deleteCartByUserId
+  updateCartItemQuantityByUserId,
+  deleteCartItemByUserId,
+  updateCartStatusByUserId
 }
