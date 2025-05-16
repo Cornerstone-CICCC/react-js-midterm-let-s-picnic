@@ -2,11 +2,17 @@ import express, { Request, Response } from 'express'
 import dotenv from 'dotenv'
 import cookieSession from 'cookie-session'
 import cors from 'cors'
-dotenv.config()
+// dotenv.config()
 import { connectDb } from './database/dbClient'
 import userRouter from './routes/user.routes'
 import categoryRouter from './routes/category.routes'
 import productRouter from './routes/product.routes'
+
+if (process.env.NODE_ENV === 'test') {
+  dotenv.config({ path: './.env.test' }); // テスト用の設定ファイルを読み込む
+} else {
+  dotenv.config();  // 開発用の設定ファイルを読み込む
+}
 
 // Create server
 const app = express()
@@ -52,3 +58,5 @@ connectDb().then(() => {
 }).catch(err => {
   console.error(err)
 })
+
+export default app;
