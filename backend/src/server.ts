@@ -7,6 +7,7 @@ import { connectDb } from './database/dbClient'
 import userRouter from './routes/user.routes'
 import categoryRouter from './routes/category.routes'
 import productRouter from './routes/product.routes'
+import cartRouter from './routes/cart.routes'
 
 // Create server
 const app = express()
@@ -33,12 +34,12 @@ app.use(cookieSession({
 app.use('/user', userRouter);
 app.use('/category', categoryRouter);
 app.use('/product', productRouter)
+app.use('/cart', cartRouter)
 
 // Fallback
 app.use((req: Request, res: Response) => {
   res.status(404).send("Invalid route!")
 })
-
 
 const PORT = process.env.PORT || 3000
 
