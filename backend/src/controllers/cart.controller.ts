@@ -75,32 +75,74 @@ const getCartByUserId = async (req: Request, res: Response) => {
 }
 
 //  edit cart by userId (just edit status: "active")
+// const editCartByUserId = async (req: Request, res: Response) => {
+//   const userId = parseInt(req.params.userId)
+//   const { cartItemId, quantity } = req.body
+
+//   if (isNaN(userId) || isNaN(cartItemId)) {
+//     res.status(400).json({ error: "Invalid user ID or cart item ID. Must be a number." })
+//     return
+//   }
+
+//   if (typeof quantity !== 'number' || quantity < 1) {
+//     res.status(400).json({ error: "Quantity must be a positive number." })
+//     return
+//   }
+  
+//   try {
+//     const updatedItem = await cartModel.updateCartByUserId(userId)
+
+//     if (!updatedItem) {
+//       res.status(404).json({ error: "Cart or cart item not found." })
+//       return
+//     }
+//     res.status(200).json(updatedItem)
+//   } catch (err) {
+//     res.status(500).json({ error: "Failed to edit cart" });
+//   }
+// }
+
 const editCartByUserId = async (req: Request, res: Response) => {
   const userId = parseInt(req.params.userId)
-  const { cartItemId, quantity } = req.body
+  const items = req.body // [{ productId, quantity }, ...]
 
-  if (isNaN(userId) || isNaN(cartItemId)) {
-    res.status(400).json({ error: "Invalid user ID or cart item ID. Must be a number." })
+  if (isNaN(userId)) {
+    res.status(400).json({ error: "Invalid user ID. Must be a number." })
     return
   }
 
-  if (typeof quantity !== 'number' || quantity < 1) {
-    res.status(400).json({ error: "Quantity must be a positive number." })
+  // check body is array
+  if (!Array.isArray(items)) {
+    res.status(400).json({ error: "Request body must be an array of items." })
     return
   }
-  
-  try {
-    const updatedItem = await cartModel.updateCartItemQuantityByUserId(userId, quantity, cartItemId)
 
-    if (!updatedItem) {
-      res.status(404).json({ error: "Cart or cart item not found." })
+  for (const item of items) {
+    if (
+      typeof item.productId !== 'number' ||
+      typeof item.quantity !== 'number' ||
+      item.quantity < 0
+    ) {
+      res.status(400).json({ error: "Each item must have valid productId and quantity (≥ 0)." })
       return
     }
-    res.status(200).json(updatedItem)
-  } catch (err) {
-    res.status(500).json({ error: "Failed to edit cart" });
   }
-}
+
+  try {
+    const updatedCart = await cartModel.updateCartByUserId(userId, items);
+
+    if (!updatedCart) {
+      res.status(404).json({ error: "Cart not found." })
+      return
+    }
+
+    res.status(200).json(updatedCart);
+  } catch (err) {
+    console.error("editCartByUserId error:", err);
+    res.status(500).json({ error: "Failed to edit cart." })
+  }
+};
+
 
 // delete cart by userId (delete is change status to "delete")
 const deleteCartByUserId = async (req: Request, res: Response) => {

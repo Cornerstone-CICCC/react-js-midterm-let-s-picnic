@@ -205,27 +205,105 @@ const getCartByUserId = async (userId: number) => {
 };
 
 //  edit cart by userId ( active cart can change cart item quantity)
-const updateCartItemQuantityByUserId = async (userId: number, quantity: number, cartItemId: number) => {
+
+// const updateCartItemQuantityByUserId = async (userId: number, quantity: number, cartItemId: number) => {
       
-  // find active cart
-  const foundCart = await getCartByUserId(userId)
-  if (!foundCart) return undefined
-  const client = createClient()
+//   // find active cart
+//   const foundCart = await getCartByUserId(userId)
+//   if (!foundCart) return undefined
+//   const client = createClient()
+//   try {
+//     await client.connect()
+//     // update cart item quantity
+//     const result = await client.query(
+//       `UPDATE cart_item SET quantity = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING *`,
+//       [quantity, cartItemId]
+//     )
+//     return result.rows[0];
+//   } catch (err) {
+//     console.error(err)
+//     throw err
+//   } finally {
+//     await client.end()
+//   }
+// }
+
+const updateCartByUserId = async (
+  userId: number,
+  items: { productId: number, quantity: number }[]
+) => {
+  const client = createClient();
+  const errors: string[] = [];
+
   try {
-    await client.connect()
-    // update cart item quantity
-    const result = await client.query(
-      `UPDATE cart_item SET quantity = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING *`,
-      [quantity, cartItemId]
-    )
-    return result.rows[0];
+    await client.connect();
+
+    // get active cart
+    const cartRes = await client.query(
+      `SELECT id FROM cart WHERE user_id = $1 AND status = 'active'`,
+      [userId]
+    );
+    if (cartRes.rows.length === 0) return undefined;
+
+    const cartId = cartRes.rows[0].id;
+
+    for (const item of items) {
+      const { productId, quantity } = item;
+
+      // check product is exist?
+      const productCheck = await client.query(
+        `SELECT id FROM product WHERE id = $1`,
+        [productId]
+      );
+      if (productCheck.rows.length === 0) {
+        errors.push(`Product ID ${productId} not found`);
+        continue;
+      }
+
+      // check product in cart_item
+      const cartItemRes = await client.query(
+        `SELECT id FROM cart_item WHERE cart_id = $1 AND product_id = $2`,
+        [cartId, productId]
+      );
+
+      if (quantity === 0) {
+        // delete item if quantity = 0
+        if (cartItemRes.rows.length > 0) {
+          await client.query(`DELETE FROM cart_item WHERE id = $1`, [cartItemRes.rows[0].id]);
+        }
+        continue;
+      }
+
+      if (cartItemRes.rows.length > 0) {
+        // update quantity
+        await client.query(
+          `UPDATE cart_item SET quantity = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`,
+          [quantity, cartItemRes.rows[0].id]
+        );
+      } else {
+        // add new cart_item
+        await client.query(
+          `INSERT INTO cart_item (cart_id, product_id, quantity) VALUES ($1, $2, $3)`,
+          [cartId, productId, quantity]
+        );
+      }
+    }
+
+    const updatedCart = await getCartByUserId(userId);
+
+    return {
+      ...updatedCart,
+      errors: errors.length > 0 ? errors : undefined,
+    };
+
   } catch (err) {
-    console.error(err)
-    throw err
+    console.error("Cart update failed:", err);
+    throw err;
   } finally {
-    await client.end()
+    await client.end();
   }
-}
+};
+
 
 // delete cart item by userId (active cart can delete cart item)
 const deleteCartItemByUserId = async (userId: number, cartItemId: number) => {
@@ -272,7 +350,7 @@ export default {
   createCartByUserId,
   addCartItem,
   getCartByUserId,
-  updateCartItemQuantityByUserId,
+  updateCartByUserId,
   deleteCartItemByUserId,
   updateCartStatusByUserId
 }
