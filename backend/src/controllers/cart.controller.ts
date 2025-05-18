@@ -22,7 +22,7 @@ const getAllCartItems = async (req: Request, res: Response) => {
   }
 }
 
-// create cart by userId (If there is not active-status record, insert new record by active-status, if there is active-status record, update that record)
+// create cart by userId 
 const createCartByUser = async (req: Request, res: Response) => {
   try {
     const userId = parseInt(req.body.userId)
@@ -47,7 +47,7 @@ const addCartItemByUserId = async (req: Request, res: Response) => {
       res.status(400).json({ error: "Invalid user ID. Must be a number." })
       return
     }
-    const cartItem = await cartModel.addCartItemToCartByUserId(userId, productId, quantity)
+    const cartItem = await cartModel.addCartItem(userId, productId, quantity)
     res.status(201).json(cartItem)
   } catch (err) {
     console.log(err)

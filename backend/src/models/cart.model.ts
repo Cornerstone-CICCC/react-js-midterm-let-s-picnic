@@ -32,11 +32,12 @@ const getAllCartItems = async () => {
   }
 }
 
-// create cart by userId (If there is not active-status record, insert new record by active-status, if there is active-status record, update that record)
+// create cart by userId
 const createCartByUserId = async (userId: number) => {
   const client = createClient()
   try {
     await client.connect()
+    // check if there is an 'active' cart
     const findActiveCart = `
       SELECT * FROM cart
       WHERE user_id = $1 AND status = 'active'
@@ -52,7 +53,7 @@ const createCartByUserId = async (userId: number) => {
         RETURNING *
       `
       const newCart = await client.query(createCart, [userId])
-      return newCart.rows[0]
+      return newCart.rows[0] // creat a new one
     }
   } catch (err) {
     console.error(err)
@@ -63,7 +64,7 @@ const createCartByUserId = async (userId: number) => {
 }
 
 // add cart item to cart by user id
-const addCartItemToCartByUserId = async (userId: number, productId: number, quantity: number) => {
+const addCartItem = async (userId: number, productId: number, quantity: number) => {
   const client = createClient()
   try {
     await client.connect()
@@ -102,18 +103,106 @@ const addCartItemToCartByUserId = async (userId: number, productId: number, quan
 
 // get cart by userId (just show status: "active")
 const getCartByUserId = async (userId: number) => {
-  const client = createClient()
+  const client = createClient();
+
   try {
-    await client.connect()
-    const result = await client.query(`SELECT * FROM cart WHERE user_id= $1 AND status = 'active'`,[userId])
-    return result.rows[0]
+    await client.connect();
+
+    const userCartResult = await client.query(`
+      SELECT 
+        u.id AS "userId",
+        u.firstname AS "firstName",
+        u.lastname AS "lastName",
+        u.role,
+        c.id AS "cartId"
+      FROM "user" u
+      JOIN cart c ON u.id = c.user_id
+      WHERE u.id = $1 AND c.status = 'active'
+    `, [userId]);
+
+    // if don't have active cart，return cartItems[]
+    if (userCartResult.rows.length === 0) {
+      const userOnly = await client.query(`
+        SELECT 
+          id AS "userId",
+          firstname AS "firstName",
+          lastname AS "lastName",
+          role
+        FROM "user"
+        WHERE id = $1
+      `, [userId]);
+
+      return {
+        user: {
+          ...userOnly.rows[0],
+          cartId: null,
+          cartItems: []
+        }
+      };
+    }
+
+    const userCart = userCartResult.rows[0];
+    const cartItemsResult = await client.query(`
+      SELECT 
+        ci.id AS "cartItemId",
+        ci.quantity,
+        p.id AS "productId",
+        p.product_name AS "productName",
+        p.price,
+        p.image,
+        p.description,
+        p.discount_percentage AS "discountPercentage",
+        p.rating,
+        p.sku,
+        p.category_id AS "categoryId",
+        cat.category_name AS "categoryName",
+        cat.description AS "categoryDescription",
+        cat.image AS "categoryImage"
+      FROM cart_item ci
+      JOIN product p ON ci.product_id = p.id
+      JOIN category cat ON p.category_id = cat.id
+      WHERE ci.cart_id = $1
+    `, [userCart.cartId]);
+
+    const cartItems = cartItemsResult.rows.map(row => ({
+      cartItemId: row.cartItemId,
+      quantity: row.quantity,
+      product: {
+        productId: row.productId,
+        productName: row.productName,
+        price: row.price,
+        image: row.image,
+        description: row.description,
+        discountPercentage: row.discountPercentage,
+        rating: row.rating,
+        sku: row.sku,
+        categoryId: row.categoryId,
+        category: {
+          categoryName: row.categoryName,
+          categoryDescription: row.categoryDescription,
+          categoryImage: row.categoryImage
+        }
+      }
+    }));
+
+    return {
+      user: {
+        userId: userCart.userId,
+        firstName: userCart.firstName,
+        lastName: userCart.lastName,
+        role: userCart.role,
+        cartId: userCart.cartId,
+        cartItems
+      }
+    };
+
   } catch (err) {
-    console.error(err)
-    throw err
+    console.error('Error fetching cart by user ID:', err);
+    throw err;
   } finally {
-    await client.end()
+    await client.end();
   }
-}
+};
 
 //  edit cart by userId ( active cart can change cart item quantity)
 const updateCartItemQuantityByUserId = async (userId: number, quantity: number, cartItemId: number) => {
@@ -138,7 +227,7 @@ const updateCartItemQuantityByUserId = async (userId: number, quantity: number, 
   }
 }
 
-// delete cart by userId (active cart can delete cart item)
+// delete cart item by userId (active cart can delete cart item)
 const deleteCartItemByUserId = async (userId: number, cartItemId: number) => {
   // find active cart
   const foundCart = await getCartByUserId(userId)
@@ -181,7 +270,7 @@ export default {
   getAllCarts,
   getAllCartItems,
   createCartByUserId,
-  addCartItemToCartByUserId,
+  addCartItem,
   getCartByUserId,
   updateCartItemQuantityByUserId,
   deleteCartItemByUserId,

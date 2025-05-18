@@ -12,5 +12,10 @@ cartRouter.put('/item/:userId', cartController.editCartByUserId)
 cartRouter.put('/:userId', cartController.updateCartStatusByUserId)
 cartRouter.delete('/item/:userId', cartController.deleteCartByUserId) 
 
+// cartRouter.post('/:userId', cartController.addCartItemByUserId) 
+// cartRouter.get('/:userId', cartController.getCartByUserId)
+// cartRouter.put('/:userId', cartController.updateCartByUserId)
+// cartRouter.delete('/:userId', cartController.deleteCartByUserId) 
+
 export default cartRouter
 
