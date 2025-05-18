@@ -144,13 +144,25 @@ const editCartByUserId = async (req: Request, res: Response) => {
 };
 
 
-// delete cart by userId (delete is change status to "delete")
-const deleteCartByUserId = async (req: Request, res: Response) => {
+// delete cart item by userId (delete is change status to "delete")
+const deleteCartItemByUserId = async (req: Request, res: Response) => {
   const userId = parseInt(req.params.userId)
   const cartItemId = parseInt(req.body.cartItemId)
   try {
     await cartModel.deleteCartItemByUserId(userId, cartItemId)
     res.status(200).json({ message: "Product item deleted" })
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: "Failed to delete cart item" });
+  }
+}
+
+// delete cart by userId
+const deleteCartByUserId = async (req: Request, res: Response) => {
+  const userId = parseInt(req.params.userId)
+  try {
+    await cartModel.deleteCartByUserId(userId)
+    res.status(200).json({ message: "Cart deleted" })
   } catch (err) {
     console.error(err)
     res.status(500).json({ error: "Failed to delete cart" });
@@ -193,6 +205,7 @@ export default {
   addCartItemByUserId,
   getCartByUserId,
   editCartByUserId,
+  deleteCartItemByUserId,
   deleteCartByUserId,
   updateCartStatusByUserId
 }

@@ -324,6 +324,25 @@ const deleteCartItemByUserId = async (userId: number, cartItemId: number) => {
   }
 }
 
+// delete cart by user id
+const deleteCartByUserId = async (userId: number) => {
+    // find active cart
+    const foundCart = await getCartByUserId(userId)
+    if (!foundCart) return undefined
+    const client = createClient()
+    try {
+      await client.connect()
+      // delete cart by user id
+      const result = await client.query(`DELETE FROM cart WHERE user_id = ${userId}`)
+      return result.rows[0]
+    } catch (err) {
+      console.error(err)
+      throw err
+    } finally {
+      await client.end()
+    }
+}
+
 // update Cart Status By User Id
 const updateCartStatusByUserId = async (userId: number, newStatus: "active" | "purchased" | "delete") => {
   const client =createClient()
@@ -352,5 +371,6 @@ export default {
   getCartByUserId,
   updateCartByUserId,
   deleteCartItemByUserId,
+  deleteCartByUserId,
   updateCartStatusByUserId
 }
